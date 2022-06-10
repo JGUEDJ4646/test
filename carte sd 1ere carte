@@ -1,0 +1,270 @@
+// Bibliothèque nécessaire pour le shield wifi et la carte SD 
+
+#include <SPI.h>
+#include <SD.h>
+
+
+File myFile;
+
+// INITIALISATION DES DIFFERENTS CAPTEURS
+
+//DHT22
+
+#include <DHT.h> //La librairie du DHT22 
+
+#define typeDeDHT1 DHT22 // Défini le type de DHT utilisé, dans notre cas des DHT22
+#define typeDeDHT2 DHT22 
+#define typeDeDHT3 DHT22 
+#define typeDeDHT4 DHT22 
+
+#define brocheBranchementDHT1 3   // permet de définir la pin de sortie de chaque DHT22
+#define brocheBranchementDHT2 2
+#define brocheBranchementDHT3 8
+#define brocheBranchementDHT4 9
+
+DHT dht1(brocheBranchementDHT1, typeDeDHT1);
+DHT dht2(brocheBranchementDHT2, typeDeDHT2);
+DHT dht3(brocheBranchementDHT3, typeDeDHT3);
+DHT dht4(brocheBranchementDHT4, typeDeDHT4);
+
+//MAX6675
+#include <max6675.h>  //La librairie du MAX6675
+int soPin = 5;  // Data Out Port SPI sur 4-5-6
+int sckPin = 6;  //Clock
+int csPin1 = 7;  //Chip Select
+int csPin2 = 4;
+
+MAX6675 Module1(sckPin, csPin1, soPin); // permet de définir chaque MAX6675 ainsi que leur différentes pins associées
+MAX6675 Module2(sckPin, csPin2, soPin);
+
+
+// Anèmométre Wind Rev.P 1 :
+const int OutPin1  = A0;   // pin de sortie de l'anémomètre 
+const int TempPin1= A1;   // pin récupérant la température de l'anémomètre 
+
+// Anèmométre Wind Rev.P 2 :
+const int OutPin2  = A4;   // pin de sortie de l'anémomètre 
+const int TempPin2 = A3;   // pin récupérant la température de l'anémomètre 
+
+
+//Pyranomètre SP-215
+//int analogPin = A2; // pin de sortie du pyranomètre
+//int pyrano = 0; // initialisation du pyranomètre
+
+
+void setup() {
+
+pinMode(10, OUTPUT);
+
+  Serial.begin(9600);
+
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
+
+
+  Serial.print("Initializing SD card...");
+
+  if (!SD.begin(4)) {
+    Serial.println("initialization failed!");
+    while (1);
+  }
+  Serial.println("initialization done.");
+
+  
+//  while(SD.exists(filename)) {
+//    filenumber++;
+//    filename = "DATA_";
+//    filename += filenumber;
+//    filename += ".csv";
+//  }
+
+  dht1.begin();
+    delay(500);
+
+  dht2.begin();
+  delay(500);
+
+  dht3.begin();
+  delay(500);
+
+  dht4.begin();
+  delay(500);
+
+
+
+
+}
+
+void loop() {
+
+    // VMC
+  
+  analogWrite(10, 180);
+  
+  // Thermocouples
+
+ float thermBase1 = Module1.readCelsius();
+float therm1 = 0.8397*thermBase1+0.2634  ; // CALIBRAGE 
+
+  
+  float thermBase2 = Module2.readCelsius();
+   float therm2 = 0.8226*thermBase2+1.133  ; // CALIBRAGE
+
+ // DHT22
+
+  // DHT22 1
+  float tauxHumidite1 = dht1.readHumidity();              // Lecture du taux d'humidité (en %)
+  float temperatureEnCelsiusBase1 = dht1.readTemperature();   // Lecture de la température, exprimée en degrés Celsius
+
+
+float temperatureEnCelsius1 =  1.1609*temperatureEnCelsiusBase1-3.2344  ;  // résultat du calibrage 
+
+
+  // DHT22 2
+  float tauxHumidite2 = dht2.readHumidity();              // Lecture du taux d'humidité (en %)
+  float temperatureEnCelsiusBase2 = dht2.readTemperature();   // Lecture de la température, exprimée en degrés Celsius
+
+
+float temperatureEnCelsius2 =  1.0243*temperatureEnCelsiusBase2-0.2442  ;  // résultat du calibrage 
+
+
+  // DHT22 3
+  float tauxHumidite3 = dht3.readHumidity();              // Lecture du taux d'humidité (en %)
+  float temperatureEnCelsiusBase3 = dht3.readTemperature();   // Lecture de la température, exprimée en degrés Celsius
+
+
+float temperatureEnCelsius3 =  0.9488*temperatureEnCelsiusBase3+1.9334  ;  // résultat du calibrage 
+
+
+  // DHT22 4
+  float tauxHumidite4 = dht4.readHumidity();              // Lecture du taux d'humidité (en %)
+  float temperatureEnCelsiusBase4 = dht4.readTemperature();   // Lecture de la température, exprimée en degrés Celsius
+
+
+float temperatureEnCelsius4 =  1.2284*temperatureEnCelsiusBase4-4.7415  ;  // résultat du calibrage 
+
+
+  // ANEMOMETRE
+
+  // Anèmométre 1
+
+  int windADunits1 = analogRead(OutPin1); // permet de récupérer la valeur de sortie du capteur
+
+  // Lecture vitesse de vent
+  float Volts1 = windADunits1 / 1024.0 * 5;
+
+  int Temp_ADC1 = analogRead(TempPin1);
+  float Temp_C1 = ((((float)Temp_ADC1 * 5.0) / 1024.0) - 0.400) / .0195;
+
+  float ZeroWind_V1 = 1.4; // Zero wind voltage
+  float Wind_MPH1 = pow(((Volts1 - ZeroWind_V1) / (3.038517 * pow((Temp_C1), 0.115157))) / 0.087288, 3.009364) ; // calcul vitesse de l'air en MPH
+
+
+  float ventBase1 = Wind_MPH1 * 0.44704;
+
+ float vent1 = 0.293*ventBase1  ; // CALIBRAGE
+
+
+  // Anèmométre 2
+
+  int windADunits2 = analogRead(OutPin2); // permet de récupérer la valeur de sortie du capteur
+
+  // Lecture vitesse de vent
+  float Volts2 = windADunits2 / 1024.0 * 5;
+
+  int Temp_ADC2 = analogRead(TempPin2);
+  float Temp_C2 = ((((float)Temp_ADC2 * 5.0) / 1024.0) - 0.400) / .0195;
+
+  float ZeroWind_V2 = 1.4; // Zero wind voltage
+  float Wind_MPH2 = pow(((Volts2 - ZeroWind_V2) / (3.038517 * pow((Temp_C2), 0.115157))) / 0.087288, 3.009364) ; // calcul vitesse de l'air en MPH
+
+
+  float ventBase2 = Wind_MPH2 * 0.44704;
+  
+  float vent2 = 0.9069*ventBase2 ;
+
+  //PYRANOMETRE
+
+ //pyrano = analogRead(analogPin);
+  // float pyr = pyrano * ((0.4 * 5) / 1024); // conversion de volt à W/m²
+
+  
+// if the file opened okay, write to it:
+  myFile = SD.open("prem.csv", FILE_WRITE);
+
+//
+  myFile.print(temperatureEnCelsius1);
+  myFile.print(",");
+
+
+  myFile.print(tauxHumidite1);
+  myFile.print(",");
+
+   myFile.print(temperatureEnCelsius2);
+  myFile.print(",");
+
+
+  myFile.print(tauxHumidite2);
+  myFile.print(",");
+
+    myFile.print(temperatureEnCelsius3);
+  myFile.print(",");
+
+
+  myFile.print(tauxHumidite3);
+  myFile.print(",");
+
+  myFile.print(temperatureEnCelsius4);
+  myFile.print(",");
+
+
+  myFile.print(tauxHumidite4);
+  myFile.print(",");
+
+
+  myFile.print(vent1);
+  myFile.print(",");
+
+
+  myFile.print(vent2);
+  myFile.print(",");
+
+  myFile.print(therm1);
+  myFile.print(",");
+
+
+  myFile.print(therm2);
+//  myFile.print(",");
+
+
+  // myFile.print(pyr);
+
+
+    myFile.println();
+
+
+     myFile.close();
+
+
+ // re-open the file for reading:
+  myFile = SD.open("prem.csv", FILE_READ);
+  if (myFile) {
+    Serial.println("prem.csv:");
+
+    // read from the file until there's nothing else in it:
+    while (myFile.available()) {
+      Serial.write(myFile.read());
+    }
+    // close the file:
+
+ myFile.close();
+  } else { 
+    // if the file didn't open, print an error:
+    Serial.println("error opening ");
+  }
+     //  myFile.close();
+
+
+  delay(60000);
+} 
